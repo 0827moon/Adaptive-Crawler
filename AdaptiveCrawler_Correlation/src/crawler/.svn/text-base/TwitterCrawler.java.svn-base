@@ -1,0 +1,260 @@
+package crawler;
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.sql.SQLException;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.Date;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.TreeMap;
+import java.util.TreeSet;
+
+import crawler.util.*;
+
+import twitter4j.FilterQuery;
+import twitter4j.TwitterStream;
+import twitter4j.TwitterStreamFactory;
+
+
+public class TwitterCrawler {
+	private SimpleDateFormat fm = new SimpleDateFormat("MM|dd-HH:mm");
+	private String fileFolder = "KeyWord", fileName;
+	private String dbFolder = "DataBase", dbName;
+	private TreeSet<String> keywordsTemp = new TreeSet<String>();
+	private TwitterStream twitterStream;
+	public static DataStream dataStream;
+	
+	private BufferedWriter out; 
+	private FilterQuery query = new FilterQuery();
+	
+	public TwitterCrawler() {
+		
+		String date = fm.format(new Date());
+		fileName = "./"+fileFolder+"/"+date;
+		dbName = "./"+dbFolder+"/"+date+".sq3";
+		Settings.databaseName = dbName;
+		
+		checkFolder();
+		
+		try {
+			out = new BufferedWriter(new FileWriter(fileName+"NewKeywords.txt"));
+			String temp = ": ";
+			for (String s: Settings.baseKeywords) { temp += s+", "; }
+			out.append(fm.format(new Date())+temp+"\n");
+			out.close();
+			
+			out = new BufferedWriter(new FileWriter(fileName+"KeywordsList.txt"));
+			out.append(fm.format(new Date())+temp+"\n");
+			out.close();
+		} catch (IOException e) {e.printStackTrace();	}
+		
+		
+		OAuthUser OA = new OAuthUser();
+    	query.track(Settings.baseKeywords);
+       twitterStream = new TwitterStreamFactory(
+        		OA.build(Settings.ConsumerKey,Settings.ConsumerSecret, Settings.AccessToken,Settings.AccessSecret)).getInstance();
+
+		dataStream = new DataStream();
+       twitterStream.addListener(dataStream);
+		twitterStream.filter(query);
+		
+		try {startTimer();} 
+	       catch (SQLException e) {e.printStackTrace();}
+	}
+	
+	private void startTimer() throws SQLException {
+		boolean newDB = true;
+		TimeCal Timer = new TimeCal(Settings.timer);
+		
+		while(true) {	
+			//System.out.println("***"+dataStream.getSize());
+			if(newDB) {
+				DataStorage.initialTable();
+				newDB = false;
+			}
+			if(dataStream.getSize()>=3000) {
+				DataStorage.tableUpdate();				
+			}
+			if(Timer.expire()) {
+				DataStorage.tableUpdate();
+				if(DataStorage.checkDB(dbName)) {
+					String date = fm.format(new Date());
+					dbName = "./"+dbFolder+"/"+date+".sq3";
+					Settings.databaseName = dbName;
+					newDB = true;
+				}
+				System.out.println("TIMER GOING OFF...");
+				
+				try{
+					keywordsTemp.clear();
+					for (String word : Settings.baseKeywords) keywordsTemp.add(word);
+					keywordsTemp.addAll(sortByValue(Settings.keywords));
+					
+					Iterator<String> ite=Settings.newKeywords.iterator();
+					String temp = "";
+					while(ite.hasNext()){
+						String word = ite.next();
+						temp += word+", ";
+					}
+					System.out.println(Settings.newKeywords.size()+"***********New keywords calculated: "+temp);
+					Settings.newKeywords.clear();
+					out = new BufferedWriter(new FileWriter(fileName+"NewKeywords.txt", true)); 
+		    		out.append(fm.format(new Date())+": "+temp+"\n");
+		    		out.close();
+		    		
+		    		Settings.keywordsList = keywordsTemp.toArray(new String[keywordsTemp.size()]);
+					
+					temp = "";
+					for (String word : Settings.keywordsList) temp += word+", ";
+					System.out.println(Settings.keywordsList.length+"**************Queried Keyword List: "+temp);
+					out = new BufferedWriter(new FileWriter(fileName+"KeywordsList.txt", true)); 
+		    		out.append(fm.format(new Date())+": "+temp+"\n");
+		    		out.close();
+		    		
+		    	}catch (IOException f){f.printStackTrace();}
+				
+
+				query.track(Settings.keywordsList);
+		    	twitterStream.filter(query);
+		    	
+		    	
+				Timer.restart();
+			}
+		}
+	}
+
+	private TreeSet<String> sortByValue(TreeMap<String, Integer> keywords){
+		ArrayList<Entry<String,Integer>> list = new ArrayList<Entry<String,Integer>>(keywords.entrySet());  
+		Collections.sort(list, new Comparator<Map.Entry<String, Integer>>(){  
+			@Override
+			public int compare(Entry<String, Integer> o1,	Entry<String, Integer> o2) {
+				return (o2.getValue() - o1.getValue()); 
+			}  
+		}); 
+		
+		TreeSet<String> keywordsSet = new TreeSet<String>();
+		for(Entry<String, Integer>   entry   :   list){
+			if(entry.getValue()>0)	keywordsSet.add(entry.getKey());
+			else break;
+		}
+		keywordsSet.addAll(Settings.newKeywords);
+		
+		for(String word:Settings.newKeywords) {
+			Settings.keywords.put(word, 0);
+		}
+		
+		try {
+			Iterator<Entry<String, Integer>> titer=Settings.keywords.entrySet().iterator();  
+			out = new BufferedWriter(new FileWriter(fileName+"KeywordsListFreq.txt", true));
+			out.append(fm.format(new Date())+"\n");
+			while(titer.hasNext()){
+				Entry<String, Integer> ent = titer.next();
+				String key = ent.getKey();
+				int value = ent.getValue();
+				System.out.println(key+"==>"+value);
+	    		out.append(key+"==>"+value+"\n");
+				Settings.keywords.put(key, 0);
+	        }
+			out.close();
+		} catch (IOException e) {e.printStackTrace();}
+		
+		
+		return keywordsSet;
+	}
+
+	private void checkFolder() {
+		File KeywordFolder, DatabaseFolder;
+		boolean stateKeywordFolder, stateDatabaseFolder;
+
+		KeywordFolder = new File("./KeyWord");
+		DatabaseFolder = new File("./DataBase");
+		stateKeywordFolder = KeywordFolder.exists();
+		stateDatabaseFolder = DatabaseFolder.exists();
+
+		if(stateKeywordFolder == false ){
+			System.out.println("The 'KeyWord' folder do not exist,trying to create one...");
+			stateKeywordFolder = KeywordFolder.mkdir();
+			if( stateKeywordFolder == false ){
+				System.out.println("Unable to create the folder,please check disk ...");
+				System.exit(1);
+			}
+		}
+		
+		if(stateDatabaseFolder == false ){
+			System.out.println("The 'Database' folder do not exist,trying to create one...");
+			stateDatabaseFolder = DatabaseFolder.mkdir();
+			if( stateDatabaseFolder == false ){
+				System.out.println("Unable to create the folder,please check disk ...");
+				System.exit(1);
+			}
+		}
+		
+	}
+	/**
+	 * @param args
+	 */
+	public static void main(String[] args) {
+		interactInput();
+		new TwitterCrawler();
+	}
+
+	 private static void interactInput(){
+        try {															  
+        	System.out.printf("********************DEFAULT VALUE******************\n");
+        	for(int i = 0; i<Settings.baseKeywords.length;i++){
+        		System.out.printf("**************** Query %2d: %7s ****************\n", i+1,Settings.baseKeywords[i]);
+        	}
+        	System.out.printf("****************** Timer: %1d mins ******************\n",Settings.timer/60/1000);
+        	System.out.printf("**************** File size: %5.3fG ****************\n",Settings.fileSize);
+			System.out.printf("**********************************************************\n");
+			
+        	System.out.print("Please enter the query terms(using comma to differentiate, press enter for default): ");
+        	BufferedReader bufferRead = new BufferedReader(new InputStreamReader(System.in));    	
+        	String temp = bufferRead.readLine();
+        	if (!temp.equals("")){
+	        	Settings.baseKeywords = temp.split(",");
+	        }else{
+	        	System.out.println("Default value used!");
+        	} 
+        	
+        	System.out.print("Please enter the time interval in minutes(press enter for default): ");
+        	bufferRead = new BufferedReader(new InputStreamReader(System.in));    	
+        	temp = bufferRead.readLine();
+        	if (!temp.equals("")){
+        		double inNum = Double.parseDouble(temp);
+	        	Settings.timer = (long) (inNum*60*1000);
+	        }else{
+	        	System.out.println("Default value used!");
+        	}
+        	
+        	System.out.print("Please enter the max file size in G(press enter for default)): ");
+        	bufferRead = new BufferedReader(new InputStreamReader(System.in));    	
+        	temp = bufferRead.readLine();
+        	if (!temp.equals("")){
+	        	Settings.fileSize = Double.parseDouble(temp);
+	        }else{
+	        	System.out.println("Default value used!");
+        	}
+        	
+        	System.out.printf("*******************ACTUAL VALUE********************\n");
+        	for(int i = 0; i<Settings.baseKeywords.length;i++){
+        		System.out.printf("**************** Query %2d: %7s ****************\n", i+1,Settings.baseKeywords[i]);
+        	}
+        	System.out.printf("***************** Timer: %2.1fmins ******************\n",(double)Settings.timer/60/1000);
+        	System.out.printf("**************** File size: %5.3fG ****************\n",Settings.fileSize);
+			System.out.printf("**********************************************************\n");
+			
+        } catch (IOException ioe) {
+        	System.out.println("IO error!");
+        	System.exit(1);
+		}
+	}
+}

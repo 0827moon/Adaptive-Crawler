@@ -1,0 +1,66 @@
+package crawler;
+
+import java.util.ArrayList;
+
+import crawler.util.Settings;
+
+import twitter4j.HashtagEntity;
+import twitter4j.Status;
+import twitter4j.StatusDeletionNotice;
+import twitter4j.StatusListener;
+
+public class DataStream implements StatusListener {
+	private ArrayList<Status> statusRepo = new ArrayList<Status>();
+	
+	public ArrayList<Status> getList() {
+		ArrayList<Status> statuses = new ArrayList<Status>(statusRepo);
+		statusRepo.clear();
+		return statuses;
+	}
+	
+	public int getSize() {
+		return statusRepo.size();
+	}
+	
+	public void onStatus(Status status) {
+		statusRepo.add(status);
+		String tweet = status.getText();
+		for (int i = 0; i<Settings.baseKeywords.length;i++) {
+			if(tweet.contains(Settings.baseKeywords[i])) {
+				HashtagEntity[] tags = status.getHashtagEntities();
+				for (HashtagEntity t: tags) {
+					String hashtag = "#"+t.getText().toLowerCase();
+					if(!Settings.keywords.containsKey(hashtag)&&hashtag.length()>3) {
+						Settings.newKeywords.add(hashtag);
+					}else if(Settings.keywords.containsKey(hashtag)) {
+						int count = Settings.keywords.get(hashtag);
+						count++;
+						Settings.keywords.put(hashtag, count);
+					}
+				}
+				break;
+			}
+		}
+		
+		HashtagEntity[] tags = status.getHashtagEntities();
+		String hashtags = "";
+		for (HashtagEntity t: tags) hashtags+=t.getText()+" ";
+		//System.out.println(status.getCreatedAt()+"#" + hashtags + " - " + status.getText());
+	}
+	
+	public void onDeletionNotice(StatusDeletionNotice statusDeletionNotice) {
+	    //System.out.println("Got a status deletion notice id:" + statusDeletionNotice.getStatusId());
+	}
+	
+	public void onTrackLimitationNotice(int numberOfLimitedStatuses) {
+	    //System.out.println("Got track limitation notice:" + numberOfLimitedStatuses);
+	}
+	
+	public void onScrubGeo(long userId, long upToStatusId) {
+	    //System.out.println("Got scrub_geo event userId:" + userId + " upToStatusId:" + upToStatusId);
+	}
+	
+	public void onException(Exception ex) {
+	    ex.printStackTrace();
+	}
+}
