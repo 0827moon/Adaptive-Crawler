@@ -1,7 +1,8 @@
 Adaptive-Crawler
 ================
 
-This Twitter Adaptive Crawler is based on the traffic correlation of Hashtags (full details in ASONAM2013 paper)
+This Twitter Adaptive Crawler is based on the traffic correlation of Hashtags (please cite the paper if you use our crawling approach in your publications: 
+Xinyue Wang, Laurissa Tokarchuk, Félix Cuadrado and Stefan Poslad. Exploiting Hashtags for Adaptive Microblog Crawling, In ASONAM2013 paper)
 
 Motivation
 ----------
