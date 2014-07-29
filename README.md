@@ -55,7 +55,7 @@ All the outputs are named with a prefix which indicates the running time & date.
 	createdAt text DEFAULT NULL, 
 	geoLocationLat double NOT NULL,
 	geoLocationLong double NOT NULL,	
-	placeInfo text, 
+	placeInfo text,
 	id bigint(50) NOT NULL, 
 	tweet longtext CHARACTER SET utf8, 
 	source text CHARACTER SET utf8, 
