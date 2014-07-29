@@ -16,7 +16,6 @@ Run the code
 ------------
 ###Dependencies
 In order to run the program, machine must has the following tools/jars
-- Correlation
   + JAVA
   + MySQL
   + MySQL jdbc
@@ -52,20 +51,20 @@ All the outputs are named with a prefix which indicates the running time & date.
 - MySQL table: a table stores all the collected tweets with name [prefix]COR
   + MySQL table format: 
   
-    (pid bigint(50) NOT NULL,
-		createdAt text DEFAULT NULL, 
-		geoLocationLat double NOT NULL,
-		geoLocationLong double NOT NULL,	
-		placeInfo text, 
-		id bigint(50) NOT NULL, 
-		tweet longtext CHARACTER SET utf8, 
-		source text CHARACTER SET utf8, 
-		lang text,
-		screenName VARCHAR(150),
-		replyTo text,
-		rtCount bigint(50), 
-		hashtags text, 
-		PRIMARY KEY (pid)}
+    	pid bigint(50) NOT NULL,
+	createdAt text DEFAULT NULL, 
+	geoLocationLat double NOT NULL,
+	geoLocationLong double NOT NULL,	
+	placeInfo text, 
+	id bigint(50) NOT NULL, 
+	tweet longtext CHARACTER SET utf8, 
+	source text CHARACTER SET utf8, 
+	lang text,
+	screenName VARCHAR(150),
+	replyTo text,
+	rtCount bigint(50), 
+	hashtags text, 
+	PRIMARY KEY (pid)
 
 ###Entrance
 The main method is in the file cralwer/TwitterCrawler.java
@@ -74,5 +73,5 @@ Pros and Cons
 -------------
 - Correlation
 
-This version of Adaptive Crawler tries to identify new keywords that talking about the event of interests. However, the performance sometime is not stable. Namely, it can lead to new noisy terms being generated which would otherwise worsen the detection of related tweets. This is because, 1) people, sometimes include hashtags that are not really relevant to the event; 2) rate limits free Twitter API access disturb the traffic pattern; 3) the traffic pattern of some irrelevant hashtags present linear relationship with the pre-defined set at sometimes. This issue is extremely apparent when the event becomes a trending one. It is difficult for this version of crawler go back to the normal state. Additional, event with little extra new hashtags is not the target application. As a result, this RKwA has strict application to the medium traffic, but not tranquil events. Currently, we are working on the content similarity based adaptive crawler. It is supposed to work under any kind of event and achieve a good accuracy. A minor delay is the cost of its good performance.
+	This version of Adaptive Crawler tries to identify new keywords that talking about the event of interests. However, the performance sometime is not stable. Namely, it can lead to new noisy terms being generated which would otherwise worsen the detection of related tweets. This is because, 1) people, sometimes include hashtags that are not really relevant to the event; 2) rate limits free Twitter API access disturb the traffic pattern; 3) the traffic pattern of some irrelevant hashtags present linear relationship with the pre-defined set at sometimes. This issue is extremely apparent when the event becomes a trending one. It is difficult for this version of crawler go back to the normal state. Additional, event with little extra new hashtags is not the target application. As a result, this RKwA has strict application to the medium traffic, but not tranquil events. Currently, we are working on the content similarity based adaptive crawler. It is supposed to work under any kind of event and achieve a good accuracy. A minor delay is the cost of its good performance.
 
