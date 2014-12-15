@@ -2,6 +2,7 @@ Adaptive-Crawler
 ================
 
 This Twitter Adaptive Crawler is based on the correlation between the traffic pattern of Hashtags.
+An enhanced version can be found from anther project [CETRE](https://github.com/0827moon/CETRe)
 
 The full details are avaible through: 
 [Xinyue Wang, Laurissa Tokarchuk, Félix Cuadrado, and Stefan Poslad. 2013. Exploiting hashtags for adaptive microblog crawling. In Proceedings of the 2013 IEEE/ACM International Conference on Advances in Social Networks Analysis and Mining (ASONAM '13). DOI=10.1145/2492517.2492624!](http://dl.acm.org/citation.cfm?id=2492517.2492624)
